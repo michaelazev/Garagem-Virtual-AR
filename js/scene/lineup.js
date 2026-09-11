@@ -17,21 +17,70 @@
  * a cena conforme o ângulo real da câmera sobre o marcador (que fica olhando
  * de cima, tipo mapa). Funciona igual com ou sem o toggle "Sem câmera".
  */
+/*
+ * Giro com o dedo: em vez de depender do ângulo real da câmera sobre o
+ * marcador (que varia e é instável), o usuário arrasta o dedo na tela pra
+ * girar o diorama congelado. window.__ARDRAG guarda o yaw/pitch acumulado;
+ * ar-freeze lê esses valores a cada frame.
+ */
+window.__ARDRAG = { yaw: 0, pitch: 0 };
+(function () {
+  var dragging = false, lastX = 0, lastY = 0;
+  var SENS = 0.006, PITCH_MAX = 0.5;
+  var MOVE_TOL = 6; // px: abaixo disso conta como toque parado, não giro
+
+  function isUi(target) {
+    return !!(target && target.closest && target.closest('#panel, #topbar, #dock, #joystick, #marker-hint, #confirm-modal, #toasts'));
+  }
+  function start(x, y) { dragging = true; lastX = x; lastY = y; }
+  function move(x, y) {
+    if (!dragging) return;
+    var dx = x - lastX, dy = y - lastY;
+    if (Math.abs(dx) < MOVE_TOL && Math.abs(dy) < MOVE_TOL) return;
+    lastX = x; lastY = y;
+    window.__ARDRAG.yaw += dx * SENS;
+    window.__ARDRAG.pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, window.__ARDRAG.pitch + dy * SENS));
+  }
+  function end() { dragging = false; }
+
+  document.addEventListener('touchstart', function (e) {
+    if (window.APP_MODE !== 'ar' || e.touches.length !== 1 || isUi(e.target)) return;
+    start(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  document.addEventListener('touchmove', function (e) {
+    if (window.APP_MODE !== 'ar' || e.touches.length !== 1) return;
+    move(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
+  document.addEventListener('touchend', end, { passive: true });
+  // desktop (mouse) também gira, útil pra testar no PC
+  document.addEventListener('mousedown', function (e) {
+    if (window.APP_MODE !== 'ar' || isUi(e.target)) return;
+    start(e.clientX, e.clientY);
+  });
+  document.addEventListener('mousemove', function (e) {
+    if (window.APP_MODE !== 'ar') return;
+    move(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseup', end);
+})();
+
 AFRAME.registerComponent('ar-freeze', {
   init: function () {
-    // sem rotação nenhuma = "de frente" de verdade (a cidade já foi desenhada
-    // encarando -Z, o mesmo eixo que a câmera olha por padrão). Posição
-    // calculada p/ a largura toda (~70 x 56un locais * escala 0.035 no #stage)
-    // caber no FOV estreito de uma tela em pé (retrato).
+    // base "de frente" (a cidade já foi desenhada encarando -Z, o mesmo eixo
+    // que a câmera olha por padrão) + o giro que o dedo acumulou em __ARDRAG.
+    // Posição calculada p/ a largura toda (~70 x 56un locais * escala 0.035
+    // no #stage) caber no FOV estreito de uma tela em pé (retrato).
     this._e = new AFRAME.THREE.Euler(0, 0, 0);
     this._q = new AFRAME.THREE.Quaternion();
   },
   tick: function () {
     if (this.el.dataset.everFound !== '1') return;   // ainda não achou o marcador -> deixa o AR.js decidir
     var o = this.el.object3D;
+    var drag = window.__ARDRAG;
     o.visible = true;
     o.matrixAutoUpdate = true;
     o.position.set(0, -0.5, -3.85);
+    this._e.set(drag.pitch, drag.yaw, 0);
     this._q.setFromEuler(this._e);
     o.quaternion.copy(this._q);
     o.scale.set(1, 1, 1);

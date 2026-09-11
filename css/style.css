@@ -267,11 +267,14 @@ button:active { transform: translateY(1px); }
 
 @media (max-width: 860px) {
   .only-mobile { display: inline-flex; }
-  #topbar { padding: 9px 10px; gap: 6px; }
+  #topbar { padding: 9px 10px; gap: 6px; flex-wrap: wrap; }
   .brand { font-size: 12px; padding: 6px 9px; }
   #mode-chip, #net-badge { display: none; }
+  .top-actions { flex: 1 1 100%; justify-content: center; }
   .ghost.sm { padding: 6px 9px; font-size: 11px; }
   #panel-toggle { font-size: 20px; padding: 8px 12px; }
+  /* o topbar quebra em 2 linhas (marca + botões) -> desce o status p/ não sobrepor */
+  #ar-status { top: 96px; }
 
   /* painel = gaveta inferior: começa RECOLHIDA (só uma alça aparece),
      abre no botão ☰ ou ao selecionar um veículo. Vale para AR e Showroom. */
