@@ -19,7 +19,11 @@
  */
 AFRAME.registerComponent('ar-freeze', {
   init: function () {
-    this._e = new AFRAME.THREE.Euler(-1.12, 0, 0);   // ~64° -> fachada de frente
+    // sem rotação nenhuma = "de frente" de verdade (a cidade já foi desenhada
+    // encarando -Z, o mesmo eixo que a câmera olha por padrão). Posição
+    // calculada p/ a largura toda (~70 x 56un locais * escala 0.035 no #stage)
+    // caber no FOV estreito de uma tela em pé (retrato).
+    this._e = new AFRAME.THREE.Euler(0, 0, 0);
     this._q = new AFRAME.THREE.Quaternion();
   },
   tick: function () {
@@ -27,7 +31,7 @@ AFRAME.registerComponent('ar-freeze', {
     var o = this.el.object3D;
     o.visible = true;
     o.matrixAutoUpdate = true;
-    o.position.set(0, -1.5, -3.4);
+    o.position.set(0, -0.5, -3.85);
     this._q.setFromEuler(this._e);
     o.quaternion.copy(this._q);
     o.scale.set(1, 1, 1);

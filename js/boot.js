@@ -62,7 +62,7 @@
   } else {
     // AR: diorama compacto sobre o marcador
     html = html
-      .replace('<a-entity id="stage" position="0 0 0">', '<a-entity id="stage" position="0 0 0.6" rotation="-20 0 0" scale="0.05 0.05 0.05">')
+      .replace('<a-entity id="stage" position="0 0 0">', '<a-entity id="stage" position="0 0 0" scale="0.035 0.035 0.035">')
       .replace('<!--ENV-->', '')
       .replace('<!--CAMERA-->', AR_CAMERA);
   }
