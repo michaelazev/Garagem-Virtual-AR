@@ -12,16 +12,9 @@
  */
 
 /*
- * ar-freeze — sempre que o marcador é achado, trava o diorama numa pose fixa
- * DE FRENTE (em pé, de "boneco pop-up"), em vez de deixar o AR.js orientar
- * a cena conforme o ângulo real da câmera sobre o marcador (que fica olhando
- * de cima, tipo mapa). Funciona igual com ou sem o toggle "Sem câmera".
- */
-/*
- * Giro com o dedo: em vez de depender do ângulo real da câmera sobre o
- * marcador (que varia e é instável), o usuário arrasta o dedo na tela pra
- * girar o diorama congelado. window.__ARDRAG guarda o yaw/pitch acumulado;
- * ar-freeze lê esses valores a cada frame.
+ * Giro com o dedo: o usuário arrasta o dedo na tela pra girar o diorama
+ * congelado. window.__ARDRAG guarda o yaw/pitch acumulado; ar-freeze lê
+ * esses valores a cada frame.
  */
 window.__ARDRAG = { yaw: 0, pitch: 0 };
 (function () {
@@ -33,9 +26,6 @@ window.__ARDRAG = { yaw: 0, pitch: 0 };
     return !!(target && target.closest && target.closest('#panel, #topbar, #dock, #joystick, #marker-hint, #confirm-modal, #toasts'));
   }
   function start(x, y) { dragging = true; rotated = false; lastX = x; lastY = y; }
-  // devolve true se o gesto virou giro de verdade (passou do limiar) -> quem
-  // chamou deve "engolir" o evento (stopPropagation) pra não deixar o cursor
-  // 3D de seleção (raycaster/cursor da cena) enxergar isso como clique.
   function move(x, y) {
     if (!dragging) return false;
     var dx = x - lastX, dy = y - lastY;
@@ -53,9 +43,6 @@ window.__ARDRAG = { yaw: 0, pitch: 0 };
     return wasRotated;
   }
 
-  // registrados em fase de CAPTURA no document: rodam antes do cursor 3D da
-  // cena (que escuta no canvas), então dá pra parar a propagação assim que o
-  // gesto vira giro, sem interferir num toque parado (seleção normal).
   document.addEventListener('touchstart', function (e) {
     if (window.APP_MODE !== 'ar' || e.touches.length !== 1 || isUi(e.target)) return;
     start(e.touches[0].clientX, e.touches[0].clientY);
@@ -67,7 +54,6 @@ window.__ARDRAG = { yaw: 0, pitch: 0 };
   document.addEventListener('touchend', function (e) {
     if (end()) e.stopPropagation();
   }, { capture: true, passive: true });
-  // desktop (mouse) também gira, útil pra testar no PC
   document.addEventListener('mousedown', function (e) {
     if (window.APP_MODE !== 'ar' || isUi(e.target)) return;
     start(e.clientX, e.clientY);
@@ -81,26 +67,33 @@ window.__ARDRAG = { yaw: 0, pitch: 0 };
   }, { capture: true });
 })();
 
+/*
+ * ar-freeze — sempre que o marcador é achado, o #stage (toda a
+ * concessionária/vitrine) é DESANEXADO de dentro do <a-marker> e colocado
+ * direto na cena (feito em ready(), função freezeStage). A partir daí o
+ * AR.js pode perder o rastreamento à vontade e esconder/mexer no
+ * <a-marker> (agora vazio) — não afeta mais o conteúdo, que passa a ser
+ * controlado 100% por este componente, anexado ao próprio #stage.
+ */
 AFRAME.registerComponent('ar-freeze', {
   init: function () {
-    // base "de frente" (a cidade já foi desenhada encarando -Z, o mesmo eixo
-    // que a câmera olha por padrão) + o giro que o dedo acumulou em __ARDRAG.
-    // Posição calculada p/ a largura toda (~70 x 56un locais * escala 0.035
-    // no #stage) caber no FOV estreito de uma tela em pé (retrato).
+    // sem rotação de base = "de frente" (a cidade já foi desenhada encarando
+    // -Z, o mesmo eixo que a câmera olha por padrão) + o giro acumulado em
+    // __ARDRAG. Posição calculada p/ a largura toda (~70 x 56un locais *
+    // escala 0.035, que o próprio #stage já tem) caber no FOV estreito de
+    // uma tela em pé (retrato).
     this._e = new AFRAME.THREE.Euler(0, 0, 0);
     this._q = new AFRAME.THREE.Quaternion();
   },
   tick: function () {
-    if (this.el.dataset.everFound !== '1') return;   // ainda não achou o marcador -> deixa o AR.js decidir
     var o = this.el.object3D;
     var drag = window.__ARDRAG;
-    o.visible = true;   // reforço (o defineProperty em ready() já garante isso)
+    o.visible = true;
     o.matrixAutoUpdate = true;
     o.position.set(0, -0.5, -3.85);
     this._e.set(drag.pitch, drag.yaw, 0);
     this._q.setFromEuler(this._e);
     o.quaternion.copy(this._q);
-    o.scale.set(1, 1, 1);
   }
 });
 
@@ -444,23 +437,26 @@ AFRAME.registerComponent('face-camera', {
     var marker = document.querySelector('a-marker');
     var hint = document.getElementById('marker-hint');
     var status = document.getElementById('ar-status');
+    var frozen = false;
     /*
-     * O próprio AR.js fica escondendo o <a-marker> (object3D.visible = false)
-     * toda vez que o rastreamento oscila — o que acontece muito mais quando
-     * a mão que segura o celular também mexe pra arrastar o dedo na tela.
-     * Isso brigava com o ar-freeze e fazia a concessionária sumir no meio do
-     * giro. Solução: uma vez achado o marcador, a propriedade "visible" do
-     * object3D é travada (getter/setter) pra NUNCA mais aceitar false —
-     * então não importa quantas vezes o AR.js tente esconder, fica sempre
-     * visível a partir daí.
+     * O AR.js controla o <a-marker> inteiro e some com ele sempre que o
+     * rastreamento oscila (o que acontece muito mais fácil quando a própria
+     * mão que segura o celular mexe pra arrastar o dedo na tela). Travar só
+     * a propriedade "visible" não bastou. Solução definitiva: assim que o
+     * marcador é achado pela 1a vez, o #stage (toda a concessionária) é
+     * desanexado de dentro do <a-marker> e colocado direto na cena — o
+     * AR.js pode continuar perdendo o rastreamento e escondendo o <a-marker>
+     * (agora vazio) à vontade, que não afeta mais nada visível.
      */
-    function lockVisible(obj3d) {
-      var v = true;
-      Object.defineProperty(obj3d, 'visible', {
-        configurable: true,
-        get: function () { return v; },
-        set: function () { v = true; }
-      });
+    function freezeStage() {
+      if (frozen) return;
+      frozen = true;
+      var stage = document.getElementById('stage');
+      var sc = document.querySelector('a-scene');
+      if (stage && sc && stage.parentNode !== sc) {
+        sc.appendChild(stage);
+        stage.setAttribute('ar-freeze', '');
+      }
     }
     if (marker && window.APP_MODE !== 'preview') {
       if (status) status.hidden = false;
@@ -470,8 +466,7 @@ AFRAME.registerComponent('face-camera', {
         lastState = found;
         if (found) {
           everFound = true;
-          marker.dataset.everFound = '1';
-          if (marker.object3D) lockVisible(marker.object3D);
+          freezeStage();
           if (hint) hint.classList.add('hidden');
           if (status) { status.textContent = 'marcador detectado ✓'; status.classList.add('found'); }
         } else {
@@ -487,7 +482,6 @@ AFRAME.registerComponent('face-camera', {
     }
 
     if (window.APP_MODE === 'ar') {
-      if (marker && !marker.getAttribute('ar-freeze')) marker.setAttribute('ar-freeze', '');
       [200, 800, 2000, 4000].forEach(function (t) { setTimeout(fitAR, t); });
       window.addEventListener('resize', function () { setTimeout(fitAR, 60); });
       window.addEventListener('orientationchange', function () { setTimeout(fitAR, 250); });
