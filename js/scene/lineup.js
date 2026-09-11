@@ -19,7 +19,7 @@
 window.__ARDRAG = { yaw: 0, pitch: 0 };
 (function () {
   var dragging = false, rotated = false, lastX = 0, lastY = 0;
-  var SENS = 0.006, PITCH_MAX = 0.5;
+  var SENS = 0.006, PITCH_MAX = 0.5, YAW_MAX = 0.6; // ~34° pra cada lado: dá pra espiar os lados sem perder o prédio de vista
   var MOVE_TOL = 6; // px: abaixo disso conta como toque parado, não giro
 
   function isUi(target) {
@@ -32,7 +32,7 @@ window.__ARDRAG = { yaw: 0, pitch: 0 };
     if (!rotated && Math.abs(dx) < MOVE_TOL && Math.abs(dy) < MOVE_TOL) return false;
     rotated = true;
     lastX = x; lastY = y;
-    window.__ARDRAG.yaw += dx * SENS;
+    window.__ARDRAG.yaw = Math.max(-YAW_MAX, Math.min(YAW_MAX, window.__ARDRAG.yaw + dx * SENS));
     window.__ARDRAG.pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, window.__ARDRAG.pitch + dy * SENS));
     return true;
   }
