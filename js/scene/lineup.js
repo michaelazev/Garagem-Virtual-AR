@@ -94,7 +94,7 @@ AFRAME.registerComponent('ar-freeze', {
     if (this.el.dataset.everFound !== '1') return;   // ainda não achou o marcador -> deixa o AR.js decidir
     var o = this.el.object3D;
     var drag = window.__ARDRAG;
-    o.visible = true;
+    o.visible = true;   // reforço (o defineProperty em ready() já garante isso)
     o.matrixAutoUpdate = true;
     o.position.set(0, -0.5, -3.85);
     this._e.set(drag.pitch, drag.yaw, 0);
@@ -444,6 +444,24 @@ AFRAME.registerComponent('face-camera', {
     var marker = document.querySelector('a-marker');
     var hint = document.getElementById('marker-hint');
     var status = document.getElementById('ar-status');
+    /*
+     * O próprio AR.js fica escondendo o <a-marker> (object3D.visible = false)
+     * toda vez que o rastreamento oscila — o que acontece muito mais quando
+     * a mão que segura o celular também mexe pra arrastar o dedo na tela.
+     * Isso brigava com o ar-freeze e fazia a concessionária sumir no meio do
+     * giro. Solução: uma vez achado o marcador, a propriedade "visible" do
+     * object3D é travada (getter/setter) pra NUNCA mais aceitar false —
+     * então não importa quantas vezes o AR.js tente esconder, fica sempre
+     * visível a partir daí.
+     */
+    function lockVisible(obj3d) {
+      var v = true;
+      Object.defineProperty(obj3d, 'visible', {
+        configurable: true,
+        get: function () { return v; },
+        set: function () { v = true; }
+      });
+    }
     if (marker && window.APP_MODE !== 'preview') {
       if (status) status.hidden = false;
       var everFound = false, lastState = null;
@@ -453,6 +471,7 @@ AFRAME.registerComponent('face-camera', {
         if (found) {
           everFound = true;
           marker.dataset.everFound = '1';
+          if (marker.object3D) lockVisible(marker.object3D);
           if (hint) hint.classList.add('hidden');
           if (status) { status.textContent = 'marcador detectado ✓'; status.classList.add('found'); }
         } else {
