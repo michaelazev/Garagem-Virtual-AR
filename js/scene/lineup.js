@@ -25,43 +25,60 @@
  */
 window.__ARDRAG = { yaw: 0, pitch: 0 };
 (function () {
-  var dragging = false, lastX = 0, lastY = 0;
+  var dragging = false, rotated = false, lastX = 0, lastY = 0;
   var SENS = 0.006, PITCH_MAX = 0.5;
   var MOVE_TOL = 6; // px: abaixo disso conta como toque parado, não giro
 
   function isUi(target) {
     return !!(target && target.closest && target.closest('#panel, #topbar, #dock, #joystick, #marker-hint, #confirm-modal, #toasts'));
   }
-  function start(x, y) { dragging = true; lastX = x; lastY = y; }
+  function start(x, y) { dragging = true; rotated = false; lastX = x; lastY = y; }
+  // devolve true se o gesto virou giro de verdade (passou do limiar) -> quem
+  // chamou deve "engolir" o evento (stopPropagation) pra não deixar o cursor
+  // 3D de seleção (raycaster/cursor da cena) enxergar isso como clique.
   function move(x, y) {
-    if (!dragging) return;
+    if (!dragging) return false;
     var dx = x - lastX, dy = y - lastY;
-    if (Math.abs(dx) < MOVE_TOL && Math.abs(dy) < MOVE_TOL) return;
+    if (!rotated && Math.abs(dx) < MOVE_TOL && Math.abs(dy) < MOVE_TOL) return false;
+    rotated = true;
     lastX = x; lastY = y;
     window.__ARDRAG.yaw += dx * SENS;
     window.__ARDRAG.pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, window.__ARDRAG.pitch + dy * SENS));
+    return true;
   }
-  function end() { dragging = false; }
+  function end() {
+    dragging = false;
+    var wasRotated = rotated;
+    rotated = false;
+    return wasRotated;
+  }
 
+  // registrados em fase de CAPTURA no document: rodam antes do cursor 3D da
+  // cena (que escuta no canvas), então dá pra parar a propagação assim que o
+  // gesto vira giro, sem interferir num toque parado (seleção normal).
   document.addEventListener('touchstart', function (e) {
     if (window.APP_MODE !== 'ar' || e.touches.length !== 1 || isUi(e.target)) return;
     start(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: true });
+  }, { capture: true, passive: true });
   document.addEventListener('touchmove', function (e) {
     if (window.APP_MODE !== 'ar' || e.touches.length !== 1) return;
-    move(e.touches[0].clientX, e.touches[0].clientY);
-  }, { passive: true });
-  document.addEventListener('touchend', end, { passive: true });
+    if (move(e.touches[0].clientX, e.touches[0].clientY)) e.stopPropagation();
+  }, { capture: true, passive: true });
+  document.addEventListener('touchend', function (e) {
+    if (end()) e.stopPropagation();
+  }, { capture: true, passive: true });
   // desktop (mouse) também gira, útil pra testar no PC
   document.addEventListener('mousedown', function (e) {
     if (window.APP_MODE !== 'ar' || isUi(e.target)) return;
     start(e.clientX, e.clientY);
-  });
+  }, { capture: true });
   document.addEventListener('mousemove', function (e) {
     if (window.APP_MODE !== 'ar') return;
-    move(e.clientX, e.clientY);
-  });
-  document.addEventListener('mouseup', end);
+    if (move(e.clientX, e.clientY)) e.stopPropagation();
+  }, { capture: true });
+  document.addEventListener('mouseup', function (e) {
+    if (end()) e.stopPropagation();
+  }, { capture: true });
 })();
 
 AFRAME.registerComponent('ar-freeze', {
