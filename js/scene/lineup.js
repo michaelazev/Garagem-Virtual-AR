@@ -12,9 +12,10 @@
  */
 
 /*
- * ar-freeze — no modo "Sem câmera" (body.hide-cam) fixa o diorama numa pose 3/4
- * de FRENTE, ignorando o rastreamento do marcador, para ver a concessionária
- * inteira e com detalhes. Sem hide-cam, deixa o AR.js controlar normalmente.
+ * ar-freeze — sempre que o marcador é achado, trava o diorama numa pose fixa
+ * DE FRENTE (em pé, de "boneco pop-up"), em vez de deixar o AR.js orientar
+ * a cena conforme o ângulo real da câmera sobre o marcador (que fica olhando
+ * de cima, tipo mapa). Funciona igual com ou sem o toggle "Sem câmera".
  */
 AFRAME.registerComponent('ar-freeze', {
   init: function () {
@@ -22,7 +23,7 @@ AFRAME.registerComponent('ar-freeze', {
     this._q = new AFRAME.THREE.Quaternion();
   },
   tick: function () {
-    if (!document.body.classList.contains('hide-cam')) return;
+    if (this.el.dataset.everFound !== '1') return;   // ainda não achou o marcador -> deixa o AR.js decidir
     var o = this.el.object3D;
     o.visible = true;
     o.matrixAutoUpdate = true;
@@ -376,6 +377,7 @@ AFRAME.registerComponent('face-camera', {
         lastState = found;
         if (found) {
           everFound = true;
+          marker.dataset.everFound = '1';
           if (hint) hint.classList.add('hidden');
           if (status) { status.textContent = 'marcador detectado ✓'; status.classList.add('found'); }
         } else {
