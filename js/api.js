@@ -17,7 +17,7 @@
 
   var CFG = global.APP_CONFIG;
   var NO_API = !CFG.API_URL;                       // hospedagem estática -> só LocalStorage
-  var BASE = (CFG.API_URL || '') + '/' + CFG.RESOURCE;
+  var BASE = (CFG.API_URL || '').replace(/\/+$/, '') + '/' + CFG.RESOURCE;
 
   var listeners = {};
   var online = null; // null = ainda não testado

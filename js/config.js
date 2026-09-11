@@ -8,7 +8,7 @@
     window.__API_URL = 'http://localhost:3001';
   } else if (/-8080\.(app\.github\.dev|githubpreview\.dev)$/.test(h)) {
     // GitHub Codespaces: cada porta vira um subdomínio -> troca 8080 por 3001
-    window.__API_URL = proto + '//' + h.replace('-8080.', '-3001.') + '/';
+    window.__API_URL = proto + '//' + h.replace('-8080.', '-3001.');
   } else if (/\.github\.io$/.test(h) || /\.netlify\.app$/.test(h) || /\.trycloudflare\.com$/.test(h) || /\.vercel\.app$/.test(h)) {
     // hospedagem estática: não há API -> força o modo LocalStorage
     window.__API_URL = '';
