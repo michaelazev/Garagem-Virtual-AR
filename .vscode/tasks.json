@@ -1,0 +1,44 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Rodar tudo (API :3001 + Frontend :8080)",
+      "type": "shell",
+      "command": "npm start",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "runOptions": { "instanceLimit": 1 }
+    },
+    {
+      "label": "Só a API (JSON Server :3001)",
+      "type": "shell",
+      "command": "npm run api",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Só o Frontend (:8080)",
+      "type": "shell",
+      "command": "npm run front",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Frontend HTTPS (:8443) — testar AR no celular",
+      "type": "shell",
+      "command": "npm run front:https",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": { "reveal": "always", "panel": "dedicated" }
+    },
+    {
+      "label": "Regenerar marcador GARAGEM VIRTUAL",
+      "type": "shell",
+      "command": "npm run marker",
+      "presentation": { "reveal": "always", "panel": "shared" }
+    }
+  ]
+}

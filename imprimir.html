@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Marcador — Garagem Virtual AR</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 32px; background: #eef2f7; color: #0f172a;
+      font-family: 'Inter', system-ui, Segoe UI, Roboto, sans-serif;
+      display: flex; justify-content: center;
+    }
+    .sheet {
+      background: #fff; width: 100%; max-width: 640px; border-radius: 18px;
+      padding: 36px 40px 44px; box-shadow: 0 20px 60px -20px rgba(15, 23, 42, .35);
+      text-align: center;
+    }
+    h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: .5px; }
+    h1 b { color: #0ea5e9; }
+    .sub { margin: 0 0 22px; color: #64748b; font-size: 14px; }
+    .codes { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+    .code { flex: 0 0 auto; }
+    .code img { width: 280px; height: 280px; border: 1px solid #e2e8f0; image-rendering: pixelated; }
+    .code .lbl { margin-top: 8px; font-weight: 800; letter-spacing: 2px; font-size: 13px; color: #334155; }
+    .code .txt { font-size: 12px; color: #64748b; max-width: 280px; }
+    ol { text-align: left; max-width: 480px; margin: 22px auto 0; padding-left: 20px; color: #334155; font-size: 14px; line-height: 1.7; }
+    ol code { background: #f1f5f9; padding: 1px 6px; border-radius: 5px; font-size: 13px; }
+    .tips { margin-top: 16px; font-size: 12.5px; color: #64748b; text-align: left; max-width: 480px; margin-left: auto; margin-right: auto; }
+    .print-btn {
+      margin-top: 24px; border: none; background: #0ea5e9; color: #fff; font-weight: 700;
+      padding: 11px 22px; border-radius: 10px; font-size: 14px; cursor: pointer;
+    }
+    @media print {
+      body { background: #fff; padding: 0; }
+      .sheet { box-shadow: none; max-width: none; }
+      .print-btn { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="sheet">
+    <h1>Garagem&nbsp;Virtual&nbsp;<b>AR</b></h1>
+    <p class="sub">1) escaneie o QR para abrir o site &nbsp;·&nbsp; 2) aponte a câmera para o marcador</p>
+
+    <div class="codes">
+      <div class="code">
+        <img src="assets/qr-abrir-no-celular.png" alt="QR para abrir o site"
+             onerror="this.closest('.code').style.opacity=.35" />
+        <div class="lbl">ABRIR O SITE</div>
+        <div class="txt">Gere com <code>npm run qr</code> (ou <code>npm run qr -- URL_DO_DEPLOY</code>).</div>
+      </div>
+      <div class="code">
+        <img src="assets/marcador-garagem.png" alt="Marcador AR" />
+        <div class="lbl">MARCADOR AR</div>
+        <div class="txt">Aponte a câmera aqui — a concessionária 3D aparece em cima.</div>
+      </div>
+    </div>
+
+    <ol>
+      <li><b>No PC:</b> <code>npm start</code> e abra <code>http://localhost:8080/</code> (a câmera funciona em localhost).</li>
+      <li><b>No celular:</b> um link HTTPS — <code>npm run tunnel</code> (Cloudflare) ou publique no GitHub Pages / Netlify.
+        Depois <code>npm run qr -- SUA_URL</code> gera o QR de cima.</li>
+      <li>Abra o link, dê <b>permissão de câmera</b> e aponte para o marcador. Botão <b>"Sem câmera"</b> mostra o 3D inteiro.</li>
+    </ol>
+
+    <div class="tips">
+      Dicas: <b>imprima</b> o marcador (~8–10&nbsp;cm) — apontar para a tela do notebook falha muito
+      (brilho/reflexo). Mantenha o marcador inteiro no quadro, de frente, boa luz, ~15–40&nbsp;cm.
+    </div>
+
+    <button class="print-btn" onclick="window.print()">Imprimir</button>
+  </div>
+</body>
+</html>

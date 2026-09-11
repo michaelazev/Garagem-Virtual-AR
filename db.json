@@ -1,0 +1,88 @@
+{
+  "vehicles": [
+    {
+      "marca": "Renault",
+      "modelo": "Kwid",
+      "categoria": "hatch",
+      "ano": 2022,
+      "cor": "#1c1c1e",
+      "corNome": "Preto",
+      "potenciaCv": 88,
+      "preco": 57210,
+      "placa": "DNM8E51",
+      "id": 1
+    },
+    {
+      "marca": "Toyota",
+      "modelo": "SW4",
+      "categoria": "suv",
+      "ano": 2019,
+      "cor": "#b8c0c9",
+      "corNome": "Prata",
+      "potenciaCv": 158,
+      "preco": 237450,
+      "placa": "KRV1O85",
+      "id": 2
+    },
+    {
+      "marca": "Volkswagen",
+      "modelo": "T-Cross",
+      "categoria": "suv",
+      "ano": 2008,
+      "cor": "#1c1c1e",
+      "corNome": "Preto",
+      "potenciaCv": 190,
+      "preco": 317430,
+      "placa": "ZJD9F47",
+      "id": 3
+    },
+    {
+      "marca": "Chevrolet",
+      "modelo": "S10",
+      "categoria": "caminhonete",
+      "ano": 2016,
+      "cor": "#5b6672",
+      "corNome": "Cinza",
+      "potenciaCv": 220,
+      "preco": 129340,
+      "placa": "WNQ9T20",
+      "id": 4
+    },
+    {
+      "marca": "Renault",
+      "modelo": "Oroch",
+      "categoria": "caminhonete",
+      "ano": 2011,
+      "cor": "#f2f4f7",
+      "corNome": "Branco",
+      "potenciaCv": 301,
+      "preco": 190600,
+      "placa": "EAQ7L73",
+      "id": 5
+    },
+    {
+      "marca": "Toyota",
+      "modelo": "SW4",
+      "categoria": "suv",
+      "ano": 2016,
+      "cor": "#f2f4f7",
+      "corNome": "Branco",
+      "potenciaCv": 191,
+      "preco": 303980,
+      "placa": "NDV1C83",
+      "id": 6
+    },
+    {
+      "marca": "Renault",
+      "modelo": "Oroch",
+      "categoria": "caminhonete",
+      "ano": 2011,
+      "cor": "#f2f4f7",
+      "corNome": "Branco",
+      "potenciaCv": 301,
+      "preco": 190600,
+      "placa": "EAQ7L73",
+      "id": 7
+    }
+  ]
+}

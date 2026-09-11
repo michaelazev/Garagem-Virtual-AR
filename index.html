@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>Garagem Virtual AR</title>
+
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%F0%9F%9A%97%3C/text%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+
+  <!-- silencia o ruído "Unknown property ... for component/system material" que o
+       A-Frame 1.3.0 emite ao inicializar muitas primitivas (é só log, não é erro).
+       Precisa rodar ANTES do A-Frame para o módulo 'debug' capturar a versão filtrada. -->
+  <script>
+    (function () {
+      var noise = /Unknown property .* for component\/system .material/;
+      ['log', 'debug', 'info'].forEach(function (m) {
+        var orig = console[m] ? console[m].bind(console) : function () {};
+        console[m] = function () {
+          var s = arguments.length ? String(arguments[0]) : '';
+          if (s.indexOf('schema:warn') !== -1 || noise.test(s)) return;
+          return orig.apply(null, arguments);
+        };
+      });
+    })();
+  </script>
+
+  <!-- Bibliotecas obrigatórias: A-Frame + AR.js -->
+  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/gh/AR-js-org/AR.js@3.4.5/aframe/build/aframe-ar.js"></script>
+
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <header id="topbar">
+    <div class="brand"><span class="dot"></span> Garagem&nbsp;Virtual&nbsp;<b>AR</b></div>
+    <div class="top-actions">
+      <span id="mode-chip" class="chip">AR</span>
+      <span id="net-badge" class="badge off">verificando&hellip;</span>
+      <button id="btn-cam" class="ghost sm">Sem câmera</button>
+      <button id="btn-marker" class="ghost sm">Marcador</button>
+      <button id="btn-mode" class="ghost sm">Showroom</button>
+      <button id="panel-toggle" class="ghost sm only-mobile" aria-label="Abrir painel">&#9776;</button>
+    </div>
+  </header>
+
+  <aside id="panel" class="panel">
+    <span class="panel-grip" aria-hidden="true"></span>
+
+    <section class="card">
+      <div class="card-head">
+        <h2>Registros <span id="count-chip" class="count">0</span></h2>
+        <span id="meta-line" class="meta"></span>
+      </div>
+      <div class="btn-row">
+        <button id="act-new" class="primary">+ Novo veículo</button>
+        <button id="act-seed" class="secondary">Popular garagem</button>
+        <button id="act-random" class="secondary">Aleatório</button>
+        <button id="act-reload" class="secondary">Recarregar</button>
+        <button id="act-clear" class="danger-ghost">Limpar tudo</button>
+      </div>
+    </section>
+
+    <section class="card" id="edit-card" hidden>
+      <div class="card-head">
+        <h2 id="form-title">Novo veículo</h2>
+        <button type="button" id="f-close" class="ghost sm" aria-label="Fechar">&times;</button>
+      </div>
+      <form id="veh-form" data-mode="create" autocomplete="off">
+        <input type="hidden" id="f-id" />
+        <label>Marca<select id="f-marca"></select></label>
+        <label>Modelo<input id="f-modelo" placeholder="Ex.: Argo" required /></label>
+        <label>Categoria<select id="f-categoria"></select></label>
+        <label>Ano<input id="f-ano" type="number" min="1950" max="2026" value="2024" /></label>
+        <label>Potência (cv)<input id="f-cv" type="number" min="30" max="1200" value="110" /></label>
+        <label>Preço (R$)<input id="f-preco" type="number" min="0" step="100" value="90000" /></label>
+        <label>Placa<input id="f-placa" maxlength="7" placeholder="ABC1D23" /></label>
+        <label class="color-field">Cor<input id="f-cor" type="color" value="#1e88e5" /></label>
+        <div class="form-actions">
+          <button type="submit" id="f-submit" class="primary">Criar (POST)</button>
+          <button type="button" id="f-patch" class="secondary" hidden>PATCH preço/cv</button>
+          <button type="button" id="f-testdrive" class="secondary" hidden>&#9654; Test drive</button>
+          <button type="button" id="f-cancel" class="ghost">Cancelar</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Lista virtual</h2><span class="hint">clique = seleciona na cena</span></div>
+      <ul id="veh-list"></ul>
+    </section>
+
+    <section class="card">
+      <div class="card-head"><h2>Requisições HTTP</h2><button id="log-clear" class="ghost sm">limpar</button></div>
+      <div id="req-log"></div>
+    </section>
+  </aside>
+
+  <div id="dock">
+    <button id="dock-panel" class="ghost sm" title="Painel">&#9776;</button>
+    <button id="dock-new" class="ghost sm" title="Novo veículo">&#43;</button>
+    <button id="dock-seed" class="ghost sm" title="Popular garagem">&#9860;</button>
+    <span id="dock-hint">WASD mover · arrastar mouse olhar · clique num carro seleciona · clique fora fecha</span>
+  </div>
+
+  <div id="toasts"></div>
+
+  <div id="confirm-modal" class="modal" hidden>
+    <div class="modal-box">
+      <p id="confirm-text"></p>
+      <div class="modal-actions">
+        <button type="button" id="confirm-cancel" class="ghost">Cancelar</button>
+        <button type="button" id="confirm-ok" class="danger-solid">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="marker-hint">
+    <img src="assets/marcador-garagem.png" alt="Marcador Garagem Virtual" />
+    <p>Aponte a câmera para o <b>código do marcador</b></p>
+    <a href="marcador.html" target="_blank" rel="noopener">Abrir marcador em tela cheia</a>
+    <a href="imprimir.html" target="_blank" rel="noopener">Página para imprimir</a>
+  </div>
+
+  <div id="ar-status" hidden>procurando marcador&hellip;</div>
+
+  <div id="joystick" hidden><span class="joy-knob"></span></div>
+
+  <div id="ar-root"></div>
+
+  <!-- Cena declarada como template: o boot.js injeta a versão AR (marcador) ou Showroom (?preview) -->
+  <script type="text/html" id="scene-tpl">
+    <a-scene
+      vr-mode-ui="enabled: false"
+      loading-screen="enabled: false"
+      renderer="colorManagement: true; alpha: true; antialias: true"
+      arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3_HAMMING63; trackingMethod: best"
+      cursor="rayOrigin: mouse"
+      raycaster="objects: .clickable; far: 400">
+
+      <a-entity light="type: ambient; intensity: 1.15; color: #e6edf6"></a-entity>
+      <a-entity light="type: directional; intensity: 0.85" position="30 60 40"></a-entity>
+
+      <!--ENV-->
+
+      <a-marker type="barcode" value="1" smooth="true" smoothCount="5" smoothTolerance="0.01" smoothThreshold="2" raycaster="objects: .clickable">
+        <a-entity id="stage" position="0 0 0">
+          <a-entity id="city"></a-entity>
+          <a-entity id="content"></a-entity>
+          <a-entity id="testdrive" position="64 0 0"></a-entity>
+
+          <a-entity id="hud" position="0 3.5 -10" face-camera
+            text="value: ...; align: center; width: 13; color: #9fd0ea; wrapCount: 46"></a-entity>
+
+          <a-entity id="toolbar" position="0 1.7 -10.5">
+            <a-entity class="clickable" virtual-button="label: NOVO; action: new; color: #15803d; size: 8" position="-7 0 0"></a-entity>
+            <a-entity class="clickable" virtual-button="label: ANT; action: prev; color: #1e293b; size: 8" position="-2.4 0 0"></a-entity>
+            <a-entity class="clickable" virtual-button="label: PROX; action: next; color: #1e293b; size: 8" position="2.4 0 0"></a-entity>
+            <a-entity class="clickable" virtual-button="label: APAGAR; action: delete; color: #b91c1c; size: 8" position="7 0 0"></a-entity>
+          </a-entity>
+        </a-entity>
+      </a-marker>
+
+      <!--CAMERA-->
+    </a-scene>
+  </script>
+
+  <script src="js/boot.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/data/catalog.js"></script>
+  <script src="js/data/mock.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/components/vehicle.js"></script>
+  <script src="js/components/virtual-button.js"></script>
+  <script src="js/components/player-controls.js"></script>
+  <script src="js/components/touch-joystick.js"></script>
+  <script src="js/scene/city.js"></script>
+  <script src="js/scene/test-drive.js"></script>
+  <script src="js/scene/lineup.js"></script>
+  <script src="js/ui/panel.js"></script>
+</body>
+</html>

@@ -1,0 +1,36 @@
+{
+  "name": "garagem-virtual-ar",
+  "version": "2.0.0",
+  "description": "CRUD funcional em Realidade Aumentada (AR.js, marcador customizado) + cenário 3D navegavel (concessionaria). Backend: JSON Server 0.17.4.",
+  "private": true,
+  "scripts": {
+    "api": "json-server --watch db.json --port 3001",
+    "front": "live-server --port=8080 --wait=250 --watch=index.html,css,js,assets --ignore=db.json,node_modules",
+    "front:https": "live-server --port=8443 --https=scripts/https-config.js --wait=250 --watch=index.html,css,js,assets --ignore=db.json,node_modules",
+    "web": "npm run front",
+    "start": "concurrently -n API,WEB -c blue,green \"npm:api\" \"npm:front\"",
+    "dev": "npm start",
+    "dev:https": "concurrently -n API,WEB -c blue,green \"npm:api\" \"npm:front:https\"",
+    "seed": "node scripts/seed.js",
+    "marker": "node scripts/gen-marker.js",
+    "qr": "node scripts/qr.js",
+    "tunnel": "node scripts/tunnel.js"
+  },
+  "keywords": [
+    "ar.js",
+    "aframe",
+    "crud",
+    "json-server",
+    "realidade-aumentada",
+    "3d"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "cloudflared": "^0.7.3",
+    "concurrently": "^8.2.2",
+    "json-server": "0.17.4",
+    "live-server": "^1.2.2",
+    "qrcode": "^1.5.4",
+    "selfsigned": "2.4.1"
+  }
+}
