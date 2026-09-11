@@ -305,7 +305,12 @@ AFRAME.registerComponent('face-camera', {
       hit.setAttribute('height', 2.8);
       hit.setAttribute('depth', 3);
       hit.setAttribute('material', 'opacity: 0; transparent: true');
-      hit.addEventListener('click', function () { select(v.id); });
+      // no Showroom o clique é tratado só por enablePreviewPicking() (raycast
+      // manual em pointerup); manter os dois juntos fazia cada toque
+      // selecionar E desmarcar ao mesmo tempo (select() é toggle), exigindo
+      // varios cliques. No AR não tem esse picking manual, então o click
+      // nativo (disparado pelo cursor com gaze/fuse) continua necessário.
+      if (window.APP_MODE !== 'preview') hit.addEventListener('click', function () { select(v.id); });
       wrap.appendChild(hit);
 
       content.appendChild(wrap);
