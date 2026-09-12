@@ -1,186 +1,164 @@
-# Garagem Virtual AR — CRUD + Realidade Aumentada + cenário 3D
+# 🚗 Garagem Virtual AR
 
-CRUD de veículos com **AR.js** (marcador customizado da concessionária) e um **cenário 3D
-navegável** onde o jogador anda pela cidade, seleciona carros e faz **test drive**.
-Backend: **JSON Server 0.17.4**. Dados também espelhados no **LocalStorage** (fallback offline).
+CRUD de veículos em **Realidade Aumentada**, com um cenário 3D navegável (a concessionária)
+onde é possível caminhar, selecionar veículos e realizar test drives.
+
+Projeto acadêmico que integra **AR.js** + **A-Frame** a um backend REST simulado com
+**JSON Server**, demonstrando as operações de CRUD mapeadas para os verbos HTTP reais,
+com persistência local via **LocalStorage**.
 
 ---
 
-## Como rodar
+## Sobre o projeto
+
+A aplicação funciona em dois modos:
+
+- **Modo AR** — aponte a câmera do celular ou computador para o marcador impresso e a
+  concessionária aparece sobreposta ao ambiente real, com todos os veículos cadastrados.
+- **Modo Showroom** — um cenário 3D completo e navegável (avenida, concessionária,
+  estacionamento, rotatória), onde o usuário anda livremente, seleciona carros e testa o
+  sistema de test drive.
+
+Toda operação de cadastro, edição ou remoção de veículos é refletida em tempo real na cena
+3D e é registrada como uma requisição HTTP real contra a API.
+
+## Funcionalidades
+
+- **CRUD completo** de veículos (`POST`, `GET`, `PUT`, `PATCH`, `DELETE`) via JSON Server
+- **Persistência offline** — todos os dados são espelhados no LocalStorage e a aplicação
+  continua funcional sem conexão com a API
+- **Reconhecimento de marcador AR** (código matricial, mais robusto que marcadores de imagem)
+- **Modelos 3D proceduais** diferenciados por categoria do veículo (hatch, sedã, caminhonete, SUV)
+- **Test drive animado** — o veículo selecionado percorre uma trajetória circular
+- **Cenário 3D navegável** com movimentação por teclado (desktop) ou joystick virtual (mobile)
+- **Interação em RA** por clique, *gaze* (cursor com tempo de fixação) e botões virtuais 3D
+- **Painel de controle** com formulário de cadastro, lista de veículos e log de requisições HTTP
+- **Acesso remoto via QR Code**, com suporte a túnel HTTPS para testes em dispositivos móveis
+
+## Tecnologias
+
+| Camada | Tecnologia |
+|---|---|
+| Realidade Aumentada | [AR.js](https://ar-js-org.github.io/AR.js-Docs/) 3.4.5 |
+| Cena 3D / WebXR | [A-Frame](https://aframe.io/) 1.3.0 |
+| Backend simulado | [JSON Server](https://github.com/typicode/json-server) 0.17.4 |
+| Persistência offline | LocalStorage (API do navegador) |
+| Servidor de desenvolvimento | live-server |
+
+---
+
+## Pré-requisitos
+
+- [Node.js](https://nodejs.org/) 18 ou superior
+- Um navegador atualizado com suporte a WebGL (Chrome, Safari ou Edge recomendados)
+
+## Instalação
 
 ```bash
+git clone https://github.com/michaelazev/Garagem-Virtual-AR.git
+cd Garagem-Virtual-AR
 npm install
 ```
 
-| Objetivo | Comando | Onde acessar |
-|---|---|---|
-| **Frontend + API juntos** | `npm start` | Frontend: `http://localhost:8080` · API: `http://localhost:3001` |
-| **Só a API** (JSON Server 0.17.4) | `npm run api` | `http://localhost:3001/vehicles` |
-| **Só o Frontend** | `npm run front` | `http://localhost:8080` |
-| Frontend em **HTTPS** (testar AR no celular) | `npm run front:https` | `https://localhost:8443` ou `https://SEU_IP:8443` |
-| API + Frontend HTTPS juntos | `npm run dev:https` | — |
-| **Celular via link público** (sem aviso) | `npm run tunnel` (com `npm start` rodando) | link `https://…trycloudflare.com` + QR |
-| **QR Code** (rede local) | `npm run qr` | QR de `https://SEU_IP:8443/` |
-| Regerar o marcador | `npm run marker` | `assets/marcador-garagem.png` |
+## Executando o projeto
 
-- API e Frontend rodam em **portas separadas** (`3001` e `8080`), em processos simultâneos via `concurrently`.
-- O `npm run front` abre o navegador automaticamente.
-- Se aparecer `EADDRINUSE`, libere as portas:
-  ```bash
-  powershell -Command "Get-NetTCPConnection -LocalPort 3001,8080,8443 -State Listen -EA SilentlyContinue | Select -Expand OwningProcess -Unique | ForEach-Object { Stop-Process -Id $_ -Force }"
-  ```
+| Objetivo | Comando | Endereço |
+|---|---|---|
+| Frontend + API juntos | `npm start` | Frontend: `http://localhost:8080` · API: `http://localhost:3001` |
+| Somente a API | `npm run api` | `http://localhost:3001/vehicles` |
+| Somente o frontend | `npm run front` | `http://localhost:8080` |
+| Frontend em HTTPS (necessário para câmera em dispositivos móveis) | `npm run front:https` | `https://localhost:8443` |
+| API + frontend em HTTPS | `npm run dev:https` | — |
+| Link público para acesso via celular | `npm run tunnel` (com `npm start` já em execução) | link `https://*.trycloudflare.com` + QR Code |
+| Gerar QR Code de acesso | `npm run qr` | QR para a URL informada |
+| Regerar o marcador de RA | `npm run marker` | `assets/marcador-garagem.png` |
+
+A API e o frontend são executados em portas independentes (`3001` e `8080` respectivamente),
+simultaneamente através do `concurrently`.
 
 ---
 
-## Modos
+### Acesso via dispositivo móvel
 
-| URL | Modo | Descrição |
-|---|---|---|
-| `http://localhost:8080/` | **AR** | Webcam + **marcador GARAGEM VIRTUAL**. Atende o requisito de AR.js. |
-| `http://localhost:8080/?preview=1` | **Showroom** | Cidade 3D navegável (sem câmera). Para testar/apresentar o CRUD + test drive. |
+A câmera do navegador só é liberada em conexões **HTTPS** (ou `localhost`). Para testar o
+modo AR em um celular, gere um link público com certificado válido:
 
-### Marcador (código matricial 3×3, não usa mais o Hiro)
-- `<a-marker type="barcode" value="5">` + `matrixCodeType: 3x3` — um **código quadriculado
-  (tipo QR)**, que lê bem melhor no celular do que um marcador de imagem.
-- Imagem para imprimir/mostrar: [`assets/marcador-garagem.png`](assets/marcador-garagem.png).
-  Página pronta para impressão: `http://localhost:8080/imprimir.html`.
-- Regenerar: `npm run marker` (a partir de `assets/_src-barcode.png`).
+```bash
+# terminal 1
+npm start
 
-### Abrir no celular
-
-A câmera do celular **só liga em HTTPS**. Duas formas:
-
-**A) Túnel público (recomendado — sem aviso de certificado, sem firewall):**
+# terminal 2
+npm run tunnel
 ```
-Terminal 1:  npm start
-Terminal 2:  npm run tunnel
-```
-`npm run tunnel` imprime um link `https://xxxxx.trycloudflare.com` + um **QR Code**.
-Escaneie com a câmera do celular → abre direto (certificado válido) → permita a câmera →
-aponte para o marcador. (No celular o CRUD roda pelo **LocalStorage**, sem a API.)
 
-**B) Rede local com certificado autoassinado:**
-```
-Terminal 1:  npm run dev:https      (API + site HTTPS)
-Terminal 2:  npm run qr             (QR de https://SEU_IP:8443/)
-```
-Ao abrir no celular vai aparecer **"Sua conexão não é particular" / `ERR_CERT_AUTHORITY_INVALID`** —
-isso é **normal** (certificado autoassinado). Toque em **Avançado → Continuar para o site**.
-Se o Windows perguntar, **permita o Node.js em redes privadas**.
-
-No PC via `http://localhost:8080/` a câmera funciona sem nada disso.
+O comando `tunnel` imprime um link público e um QR Code para leitura direta pela câmera do
+celular. Nesse cenário, o CRUD opera via LocalStorage, já que a API não é exposta publicamente.
 
 ---
 
 ## Controles (modo Showroom)
 
-| Ação | Como |
+| Ação | Comando |
 |---|---|
-| Andar | **W A S D** ou **setas** (Shift = correr) |
-| Olhar | **arrastar o mouse** |
-| Selecionar um veículo | **clicar** nele (abre o painel da concessionária) |
-| Fechar seleção | **clicar fora** de um veículo |
-| Test drive | selecionar um veículo → botão **▶ Test drive** no painel |
-| Ações rápidas | dock no canto (☰ painel · + novo · ⚂ popular) |
-
-O painel de controle **só aparece quando um veículo é selecionado** (ou "+ Novo veículo").
-Ao clicar em outro carro, o painel troca para os dados dele.
+| Mover | `W A S D` ou setas direcionais (`Shift` para correr) |
+| Olhar ao redor | Arrastar o mouse ou o dedo na tela |
+| Selecionar um veículo | Clicar sobre ele |
+| Fechar seleção | Clicar fora de qualquer veículo |
+| Iniciar test drive | Selecionar um veículo → botão **Test drive** no painel |
 
 ---
 
-## Como o enunciado é atendido
+## CRUD e verbos HTTP
 
-### CRUD ↔ Verbo HTTP ↔ Efeito na cena
+Cada ação do painel corresponde a uma requisição HTTP real contra o JSON Server, refletida
+imediatamente na cena 3D:
 
-| Ação | Verbo (real, JSON Server :3001) | Efeito no ambiente |
-|------|--------------------------------|--------------------|
-| **Create** | `POST /vehicles` | novo carro entra no pátio com animação |
-| **Read** | `GET /vehicles` / `GET /vehicles/:id` | pátio + lista + cartazes renderizados |
-| **Update** | `PUT /vehicles/:id` | carro gira p/ destacar; cartaz reescrito |
-| **Update parcial** | `PATCH /vehicles/:id` | botão "PATCH preço/cv" |
-| **Delete** | `DELETE /vehicles/:id` | carro sai da cena e do armazenamento |
-
-- **LocalStorage**: toda resposta é espelhada; sem API, o app opera do LocalStorage.
-- **Mocks aleatórios**: `js/data/mock.js` (marca, modelo, **categoria**, ano, cor, potência, preço, placa).
-- **Interação em RA**: clique, **gaze** (olhar fixo, cursor da câmera AR) e **botões virtuais 3D**
-  (`NOVO / ANT / PROX / APAGAR`), além do painel HTML.
-
-### Diferenciação visual dos veículos
-`js/components/vehicle.js` monta o modelo 3D conforme a **categoria**:
-`hatch` (compacto) · `sedan` (3 volumes, porta-malas) · `caminhonete` (cabine + caçamba, mais alto) · `suv` (alto, teto longo).
-
-### Test Drive
-`js/scene/test-drive.js`: cria um veículo igual ao selecionado na **rotatória** e o anima numa
-**trajetória circular suave**, orientando a frente pela tangente. Inicia/encerra pelo painel,
-usa `tick()` (não trava a app) e não move o carro original do pátio.
+| Ação | Verbo HTTP | Efeito na cena |
+|---|---|---|
+| Criar | `POST /vehicles` | Novo veículo entra no pátio com animação |
+| Listar | `GET /vehicles` | Pátio, lista e cartazes são renderizados |
+| Atualizar | `PUT /vehicles/:id` | Veículo gira em destaque; cartaz é atualizado |
+| Atualizar parcialmente | `PATCH /vehicles/:id` | Atualização rápida de preço/potência |
+| Remover | `DELETE /vehicles/:id` | Veículo sai da cena e do armazenamento |
 
 ---
 
-## Estrutura
+## Arquitetura do projeto
 
 ```
-index.html                 cena (template) + painel HTML + dock
-css/style.css               estilos
+index.html                  estrutura da cena, painel e interface auxiliar
+css/style.css                estilos da aplicação
 
 js/
-  boot.js                   decide AR x Showroom e injeta a cena
-  config.js                 URLs, portas, mapa, jogador, test drive
-  api.js                    CRUD (fetch :3001) + espelho/fallback LocalStorage + log
-  data/
-    catalog.js              marcas/modelos + CATEGORIA + cores
-    mock.js                 geração aleatória
-  components/
-    vehicle.js              modelo 3D procedural por categoria
-    virtual-button.js       botão virtual 3D
-    player-controls.js      movimentação do jogador (WASD + colisão)
-  scene/
-    city.js                 mapa/cenário planejado (avenida, quarteirões, pátio, estacionamento, rotatória)
-    lineup.js               vitrine do CRUD + seleção + cartazes
-    test-drive.js           sistema de test drive (trajetória circular)
-  ui/
-    panel.js                painel da concessionária (form CRUD, lista, log, test drive)
+├── boot.js                  seleciona o modo (AR ou Showroom) e injeta a cena
+├── config.js                configurações globais (URLs, mapa, jogador, test drive)
+├── api.js                   camada de dados: CRUD via API + fallback em LocalStorage
+├── data/
+│   ├── catalog.js           catálogo de marcas, modelos, categorias e cores
+│   └── mock.js              geração de veículos aleatórios
+├── components/
+│   ├── vehicle.js           modelo 3D procedural por categoria
+│   ├── virtual-button.js     botão virtual 3D
+│   ├── player-controls.js    movimentação do jogador
+│   └── touch-joystick.js     joystick virtual (mobile)
+├── scene/
+│   ├── city.js               construção do cenário (avenida, concessionária, estacionamento)
+│   ├── lineup.js              vitrine de veículos, seleção e cartazes
+│   └── test-drive.js          sistema de test drive
+└── ui/
+    └── panel.js               painel de controle (formulário, lista, log de requisições)
 
 scripts/
-  seed.js                   `node scripts/seed.js 8` regrava o db.json
-  gen-marker.js             gera o marcador customizado (.patt + .png)
-  https-config.js           certificado autoassinado p/ `front:https`
+├── seed.js                   popula o banco de dados com veículos de exemplo
+├── gen-marker.js              gera a imagem do marcador de RA
+├── https-config.js            certificado autoassinado para desenvolvimento local
+├── qr.js                      geração de QR Code de acesso
+└── tunnel.js                  túnel público para testes em dispositivos móveis
 
-db.json                     banco do JSON Server
+db.json                       banco de dados do JSON Server
 ```
-
 ---
 
-## Rodando no GitHub Codespaces
+## Licença
 
-1. No repositório no GitHub: **Code ▸ Codespaces ▸ Create codespace on main**.
-2. O `.devcontainer/devcontainer.json` já instala tudo (`npm install`) e mapeia as portas.
-3. No terminal do Codespace: `npm start`.
-4. Na aba **PORTS**, deixe as portas **8080** e **3001** como **Public** (clique direito ▸ Port Visibility).
-5. Abra a URL pública da porta 8080 (algo como `https://SEU-CODESPACE-8080.app.github.dev`) —
-   já é **HTTPS**, então a câmera funciona direto, sem túnel.
-6. Gere o QR para essa URL: `npm run qr -- https://SEU-CODESPACE-8080.app.github.dev/`.
-
-`js/config.js` já detecta o padrão de URL do Codespaces e aponta a API para a porta 3001 automaticamente.
-
-## Publicar (link fixo) e QR para o pessoal escanear
-
-O Frontend é 100% estático — dá pra publicar em qualquer hospedagem HTTPS (GitHub Pages, Netlify, Codespaces):
-
-```bash
-npm run qr -- https://SEU_LINK_PUBLICADO/
-```
-
-Isso gera `assets/qr-abrir-no-celular.png`, que já aparece automaticamente na página
-`imprimir.html` ao lado do marcador — um único impresso com **"escaneie para abrir"** +
-**"aponte para o marcador"**. Sem link publicado ainda, use `npm run tunnel` (Cloudflare) ou
-`npm run qr` (rede local + `npm run dev:https`).
-
-> Sem a API (GitHub Pages/Codespaces sem :3001 público), o CRUD roda pelo **LocalStorage** —
-> `js/config.js` detecta isso e nem tenta a API nesses casos.
-
----
-
-## Dica para a apresentação
-Abra o **console do navegador**: cada ação imprime o verbo HTTP
-(`POST /vehicles`, `PUT /vehicles/3`, `DELETE /vehicles/3`, …), e o mesmo aparece no
-cartão **"Requisições HTTP"** do painel.
+Distribuído sob a licença MIT.
