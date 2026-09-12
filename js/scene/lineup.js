@@ -25,60 +25,65 @@
  */
 window.__ARDRAG = { yaw: 0, pitch: 0 };
 (function () {
-  var dragging = false, rotated = false, lastX = 0, lastY = 0;
-  var SENS = 0.006, PITCH_MAX = 0.5;
+  var dragging = false, lastX = 0, lastY = 0;
+  var SENS = 0.006, PITCH_MAX = 0.5, YAW_MAX = 0.6; // ~34° pra cada lado: dá pra espiar os lados sem perder o prédio de vista
   var MOVE_TOL = 6; // px: abaixo disso conta como toque parado, não giro
+  var lastTapT = 0, lastTapX = 0, lastTapY = 0;
+  var DTAP_MS = 400, DTAP_DIST = 40;
 
   function isUi(target) {
     return !!(target && target.closest && target.closest('#panel, #topbar, #dock, #joystick, #marker-hint, #confirm-modal, #toasts'));
   }
-  function start(x, y) { dragging = true; rotated = false; lastX = x; lastY = y; }
-  // devolve true se o gesto virou giro de verdade (passou do limiar) -> quem
-  // chamou deve "engolir" o evento (stopPropagation) pra não deixar o cursor
-  // 3D de seleção (raycaster/cursor da cena) enxergar isso como clique.
+  function start(x, y) { dragging = true; lastX = x; lastY = y; }
   function move(x, y) {
-    if (!dragging) return false;
+    if (!dragging) return;
     var dx = x - lastX, dy = y - lastY;
-    if (!rotated && Math.abs(dx) < MOVE_TOL && Math.abs(dy) < MOVE_TOL) return false;
-    rotated = true;
+    if (Math.abs(dx) < MOVE_TOL && Math.abs(dy) < MOVE_TOL) return;
     lastX = x; lastY = y;
-    window.__ARDRAG.yaw += dx * SENS;
+    window.__ARDRAG.yaw = Math.max(-YAW_MAX, Math.min(YAW_MAX, window.__ARDRAG.yaw + dx * SENS));
     window.__ARDRAG.pitch = Math.max(-PITCH_MAX, Math.min(PITCH_MAX, window.__ARDRAG.pitch + dy * SENS));
-    return true;
   }
-  function end() {
+  // toque duplo (sem arrastar) em qualquer lugar vazio da tela AR reseta o
+  // giro pro centro na hora — sem precisar recarregar a página.
+  function checkDoubleTap(x, y) {
+    var now = Date.now();
+    var dist = Math.hypot(x - lastTapX, y - lastTapY);
+    if (now - lastTapT < DTAP_MS && dist < DTAP_DIST) {
+      window.__ARDRAG.yaw = 0;
+      window.__ARDRAG.pitch = 0;
+      lastTapT = 0;
+      return true;
+    }
+    lastTapT = now; lastTapX = x; lastTapY = y;
+    return false;
+  }
+  function end(x, y) {
     dragging = false;
-    var wasRotated = rotated;
-    rotated = false;
-    return wasRotated;
+    checkDoubleTap(x, y);
   }
 
-  // registrados em fase de CAPTURA no document: rodam antes do cursor 3D da
-  // cena (que escuta no canvas), então dá pra parar a propagação assim que o
-  // gesto vira giro, sem interferir num toque parado (seleção normal).
   document.addEventListener('touchstart', function (e) {
     if (window.APP_MODE !== 'ar' || e.touches.length !== 1 || isUi(e.target)) return;
     start(e.touches[0].clientX, e.touches[0].clientY);
-  }, { capture: true, passive: true });
+  }, { passive: true });
   document.addEventListener('touchmove', function (e) {
     if (window.APP_MODE !== 'ar' || e.touches.length !== 1) return;
-    if (move(e.touches[0].clientX, e.touches[0].clientY)) e.stopPropagation();
-  }, { capture: true, passive: true });
+    move(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: true });
   document.addEventListener('touchend', function (e) {
-    if (end()) e.stopPropagation();
-  }, { capture: true, passive: true });
+    var t = e.changedTouches && e.changedTouches[0];
+    end(t ? t.clientX : lastX, t ? t.clientY : lastY);
+  }, { passive: true });
   // desktop (mouse) também gira, útil pra testar no PC
   document.addEventListener('mousedown', function (e) {
     if (window.APP_MODE !== 'ar' || isUi(e.target)) return;
     start(e.clientX, e.clientY);
-  }, { capture: true });
+  });
   document.addEventListener('mousemove', function (e) {
     if (window.APP_MODE !== 'ar') return;
-    if (move(e.clientX, e.clientY)) e.stopPropagation();
-  }, { capture: true });
-  document.addEventListener('mouseup', function (e) {
-    if (end()) e.stopPropagation();
-  }, { capture: true });
+    move(e.clientX, e.clientY);
+  });
+  document.addEventListener('mouseup', function (e) { end(e.clientX, e.clientY); });
 })();
 
 AFRAME.registerComponent('ar-freeze', {
